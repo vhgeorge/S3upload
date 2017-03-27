@@ -18,9 +18,6 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-/**
- * Created by verne on 3/16/17.
- */
 @Service
 public class FileUploadServiceImpl implements FileUploadService{
     // HLS Segment duration that will be targeted.
@@ -28,8 +25,7 @@ public class FileUploadServiceImpl implements FileUploadService{
     private static final String PIPELINE_ID = "1489438000359-7f9dvq";
     private static final String HLS_1000K_PRESET_ID = "1351620000001-200030";
     // All outputs will have this prefix prepended to their output key.
-    private static final String OUTPUT_BUCKET = "verne-media-upload";
-    private static final String OUTPUT_PREFIX = "hls1000k/";
+    private static final String OUTPUT_KEY_PREFIX = "output/hls/";
 
     /**
      * Upload and transcode file
@@ -65,7 +61,7 @@ public class FileUploadServiceImpl implements FileUploadService{
         s3.setRegion(usEast1);
         ObjectMetadata meta = new ObjectMetadata();
 
-        s3.putObject(OUTPUT_BUCKET, fileName, new ByteArrayInputStream(bytes), meta);
+        s3.putObject("verne-media-upload", fileName, new ByteArrayInputStream(bytes), meta);
     }
 
     /**
@@ -102,7 +98,7 @@ public class FileUploadServiceImpl implements FileUploadService{
         CreateJobRequest createJobRequest = new CreateJobRequest()
                 .withPipelineId(PIPELINE_ID)
                 .withInput(input)
-                .withOutputKeyPrefix(OUTPUT_PREFIX + date)
+                .withOutputKeyPrefix("hls1000k/" + date)
                 .withOutput(hls1000k);
 
         Job finishedJob = amazonElasticTranscoder.createJob(createJobRequest).getJob();
@@ -118,8 +114,8 @@ public class FileUploadServiceImpl implements FileUploadService{
 
         AmazonS3 s3 = new AmazonS3Client();
         ObjectListing objectListing = s3.listObjects(new ListObjectsRequest()
-                .withBucketName(OUTPUT_BUCKET)
-                .withPrefix(OUTPUT_PREFIX + date));
+                .withBucketName("verne-media-transcoded")
+                .withPrefix("hls1000k/" + date));
 
         addAttributes(objectListing);
 
@@ -140,7 +136,7 @@ public class FileUploadServiceImpl implements FileUploadService{
         }
         String key = objectListing.getObjectSummaries().get(i).getKey();
         String bucket = objectListing.getObjectSummaries().get(i).getBucketName();
-        S3Object object = s3.getObject(new GetObjectRequest(OUTPUT_BUCKET,
+        S3Object object = s3.getObject(new GetObjectRequest("verne-media-transcoded",
                 objectListing.getObjectSummaries().get(i).getKey()));
         String contentType = object.getObjectMetadata().getContentType();
         Video video =  new Video();
